@@ -33,7 +33,7 @@ class CommentsAdapter extends ArrayAdapter<BaseItem> implements ExitListener
     private boolean             navigationTurnedOn  = true;
     private ListView            listView            = null;
     private int					authorLayoutPaddingTop;
-    private int					commentWebViewHeight;
+    private int 				commentWebViewHeight;
       
     public CommentsAdapter(ListView parentListView, Context context, final UUID groupId, final UUID postId, int textViewResourceId,
             ArrayList<BaseItem> comments)
@@ -71,18 +71,17 @@ class CommentsAdapter extends ArrayAdapter<BaseItem> implements ExitListener
                         
                         int visiblePosition = listView.getFirstVisiblePosition();
                         View v = listView.getChildAt(commentPos - visiblePosition);
-                        if(v == null) return false;
+                        if(v == null || v.getTag() == null) return false;
+                        CommentViewHolder holder = (CommentViewHolder) v.getTag();
 
-                        RelativeLayout webViewLayout = (RelativeLayout)v.findViewById(R.id.main);
-                        ViewGroup.LayoutParams params = webViewLayout.getLayoutParams();
+                        ViewGroup.LayoutParams params = holder.webViewLayout.getLayoutParams();
 
-                        RelativeLayout authorLayout = (RelativeLayout)v.findViewById(R.id.authorLayout);
-                        authorLayout.setPadding(authorLayout.getPaddingLeft(), comment.IsExpand ? 0 : getContext().getResources().getDimensionPixelSize(R.dimen.comment_author_layout_padding_top), authorLayout.getPaddingRight(), authorLayout.getPaddingBottom());
+                        holder.authorLayout.setPadding(holder.authorLayout.getPaddingLeft(), comment.IsExpand ? 0 : authorLayoutPaddingTop, holder.authorLayout.getPaddingRight(), holder.authorLayout.getPaddingBottom());
                         
-                        params.height = comment.IsExpand ? ViewGroup.LayoutParams.FILL_PARENT : 
-                           getContext().getResources().getDimensionPixelSize(R.dimen.comment_webview_height);
+						params.height = comment.IsExpand ? ViewGroup.LayoutParams.FILL_PARENT
+								: commentWebViewHeight;
                         
-                        webViewLayout.setLayoutParams(params);
+                        holder.webViewLayout.setLayoutParams(params);
                         
                         return false;
                     }
@@ -199,35 +198,36 @@ class CommentsAdapter extends ArrayAdapter<BaseItem> implements ExitListener
 						.findViewById(R.id.rating);
 				convertView.setTag(holder);
 			}
-
+			holder.webView.stopLoading();
+			holder.webView.clearView();
+			holder.webView.loadUrl("about:blank");
 			holder.border.setIsNew(comment.IsNew);
 
 			ViewGroup.LayoutParams params = holder.webViewLayout
 					.getLayoutParams();
-			if (!navigationTurnedOn || comment.IsExpand) {
+			
+			if(comment.IsExpand){
 				holder.authorLayout.setPadding(
 						holder.authorLayout.getPaddingLeft(), 0,
 						holder.authorLayout.getPaddingRight(),
 						holder.authorLayout.getPaddingBottom());
-				params.height = ViewGroup.LayoutParams.FILL_PARENT;
+				params.height = navigationTurnedOn ? ViewGroup.LayoutParams.FILL_PARENT : commentWebViewHeight;
 				holder.webViewLayout.setLayoutParams(params);
 			} else {
-				holder.authorLayout.setPadding(
-						holder.authorLayout.getPaddingLeft(),
-						authorLayoutPaddingTop,
-						holder.authorLayout.getPaddingRight(),
-						holder.authorLayout.getPaddingBottom());
-				params.height = ViewGroup.LayoutParams.WRAP_CONTENT;
+				holder.authorLayout.setPadding(holder.authorLayout.getPaddingLeft(), navigationTurnedOn?authorLayoutPaddingTop:0, holder.authorLayout.getPaddingRight(), holder.authorLayout.getPaddingBottom());
+				params.height = commentWebViewHeight;
+				holder.webViewLayout.setLayoutParams(params);
+				holder.webViewLayout.requestLayout();
+	            params.height = navigationTurnedOn ? commentWebViewHeight : ViewGroup.LayoutParams.FILL_PARENT;
 				holder.webViewLayout.setLayoutParams(params);
 			}
-
+			
 			holder.webView
 					.setScrollBarStyle(WebView.SCROLLBARS_OUTSIDE_OVERLAY);
 			WebSettings webSettings = holder.webView.getSettings();
 			webSettings.setDefaultFontSize(13);
 			String header = "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>";
 
-			holder.webView.clearView();
 			holder.webView.loadDataWithBaseURL("", header + comment.Html,
 					"text/html", "UTF-8", null);
 
